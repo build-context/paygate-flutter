@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import WebKit
+import PaygateSDK
 
 public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
     private var pendingResult: FlutterResult?
@@ -13,10 +14,21 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
+        case "initialize":
+            handleInitialize(result: result)
         case "launch":
             handleLaunch(call: call, result: result)
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+
+    private func handleInitialize(result: @escaping FlutterResult) {
+        Task {
+            await StoreKitManager.shared.start()
+            await StoreKitManager.shared.loadPurchasedProducts()
+            let purchased = await Array(StoreKitManager.shared.purchasedProductIDs)
+            result(purchased)
         }
     }
 
@@ -27,16 +39,22 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        guard let rootVC = UIApplication.shared.keyWindow?.rootViewController?.topMostViewController() else {
+        guard let rootVC = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap({ $0.windows })
+            .first(where: { $0.isKeyWindow })?
+            .rootViewController?.topMostViewController() else {
             result(FlutterError(code: "NO_VC", message: "No view controller available", details: nil))
             return
         }
 
         let bounces = args["bounces"] as? Bool ?? false
+        let presentationStyle = args["presentationStyle"] as? String ?? "sheet"
+        let productIdMap = args["productIdMap"] as? [String: String] ?? [:]
 
         self.pendingResult = result
 
-        let paygateVC = PaygateWebViewController(htmlContent: htmlContent, bounces: bounces) { [weak self] action, productId in
+        let paygateVC = PaygateWebViewController(htmlContent: htmlContent, bounces: bounces, productIdMap: productIdMap) { [weak self] action, productId in
             var resultMap: [String: Any] = ["action": action]
             if let productId = productId {
                 resultMap["productId"] = productId
@@ -45,8 +63,19 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
             self?.pendingResult = nil
         }
 
-        paygateVC.modalPresentationStyle = .fullScreen
-        paygateVC.modalTransitionStyle = .coverVertical
+        switch presentationStyle {
+        case "fullScreen":
+            paygateVC.modalPresentationStyle = .fullScreen
+            paygateVC.modalTransitionStyle = .coverVertical
+        default:
+            paygateVC.modalPresentationStyle = .pageSheet
+            if #available(iOS 15.0, *),
+               let sheet = paygateVC.sheetPresentationController {
+                sheet.detents = [.large()]
+                sheet.prefersGrabberVisible = true
+                sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            }
+        }
         rootVC.present(paygateVC, animated: true)
     }
 }
@@ -56,12 +85,15 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
 class PaygateWebViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate {
     private let htmlContent: String
     private let bounces: Bool
+    private let productIdMap: [String: String]
     private let onComplete: (String, String?) -> Void
     private var webView: WKWebView!
+    private var isPurchasing = false
 
-    init(htmlContent: String, bounces: Bool = false, onComplete: @escaping (String, String?) -> Void) {
+    init(htmlContent: String, bounces: Bool = false, productIdMap: [String: String] = [:], onComplete: @escaping (String, String?) -> Void) {
         self.htmlContent = htmlContent
         self.bounces = bounces
+        self.productIdMap = productIdMap
         self.onComplete = onComplete
         super.init(nibName: nil, bundle: nil)
     }
@@ -125,12 +157,44 @@ class PaygateWebViewController: UIViewController, WKScriptMessageHandler, WKNavi
                 self?.onComplete("dismissed", nil)
             }
         case "purchase":
-            let productId = body["productId"] as? String
-            dismiss(animated: true) { [weak self] in
-                self?.onComplete("purchased", productId)
-            }
+            guard let productId = body["productId"] as? String else { return }
+            handlePurchase(productId: productId)
         default:
             break
+        }
+    }
+
+    private func handlePurchase(productId: String) {
+        guard !isPurchasing else { return }
+        isPurchasing = true
+
+        let storeProductId = productIdMap[productId] ?? productId
+        print("[Paygate] Purchase requested: \(productId) → App Store ID: \(storeProductId)")
+
+        Task { @MainActor in
+            do {
+                let purchasedId = try await StoreKitManager.shared.purchase(storeProductId)
+                if let purchasedId = purchasedId {
+                    print("[Paygate] Purchase completed: \(purchasedId)")
+                    dismiss(animated: true) { [weak self] in
+                        self?.onComplete("purchased", purchasedId)
+                    }
+                } else {
+                    print("[Paygate] Purchase cancelled by user")
+                    isPurchasing = false
+                    webView.evaluateJavaScript(
+                        "window.dispatchEvent(new CustomEvent('paygatePurchaseCancelled'))",
+                        completionHandler: nil
+                    )
+                }
+            } catch {
+                print("[Paygate] Purchase error: \(error.localizedDescription)")
+                isPurchasing = false
+                webView.evaluateJavaScript(
+                    "window.dispatchEvent(new CustomEvent('paygatePurchaseError', {detail: {message: \"\(error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\""))\"}}))",
+                    completionHandler: nil
+                )
+            }
         }
     }
 

@@ -9,6 +9,7 @@ Pod::Spec.new do |s|
   s.source           = { :http => 'https://github.com/paygate/paygate-flutter' }
   s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.platform         = :ios, '14.0'
+  s.dependency 'PaygateSDK'
+  s.platform         = :ios, '15.0'
   s.swift_version    = '5.0'
 end

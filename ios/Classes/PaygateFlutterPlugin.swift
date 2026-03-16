@@ -32,9 +32,11 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
+        let bounces = args["bounces"] as? Bool ?? false
+
         self.pendingResult = result
 
-        let paygateVC = PaygateWebViewController(htmlContent: htmlContent) { [weak self] action, productId in
+        let paygateVC = PaygateWebViewController(htmlContent: htmlContent, bounces: bounces) { [weak self] action, productId in
             var resultMap: [String: Any] = ["action": action]
             if let productId = productId {
                 resultMap["productId"] = productId
@@ -53,11 +55,13 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
 
 class PaygateWebViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate {
     private let htmlContent: String
+    private let bounces: Bool
     private let onComplete: (String, String?) -> Void
     private var webView: WKWebView!
 
-    init(htmlContent: String, onComplete: @escaping (String, String?) -> Void) {
+    init(htmlContent: String, bounces: Bool = false, onComplete: @escaping (String, String?) -> Void) {
         self.htmlContent = htmlContent
+        self.bounces = bounces
         self.onComplete = onComplete
         super.init(nibName: nil, bundle: nil)
     }
@@ -70,7 +74,20 @@ class PaygateWebViewController: UIViewController, WKScriptMessageHandler, WKNavi
         super.viewDidLoad()
         view.backgroundColor = .black
         setupWebView()
-        webView.loadHTMLString(htmlContent, baseURL: nil)
+        loadContent()
+    }
+
+    private func loadContent() {
+        let viewportMeta = "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\">"
+        let html: String
+        if htmlContent.range(of: "<head>", options: .caseInsensitive) != nil {
+            html = htmlContent.replacingOccurrences(
+                of: "<head>", with: "<head>\(viewportMeta)", options: .caseInsensitive
+            )
+        } else {
+            html = "\(viewportMeta)\(htmlContent)"
+        }
+        webView.loadHTMLString(html, baseURL: nil)
     }
 
     private func setupWebView() {
@@ -82,7 +99,8 @@ class PaygateWebViewController: UIViewController, WKScriptMessageHandler, WKNavi
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
-        webView.scrollView.bounces = false
+        webView.scrollView.bounces = bounces
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.translatesAutoresizingMaskIntoConstraints = false

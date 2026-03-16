@@ -24,7 +24,7 @@ class Paygate {
   ///
   /// Returns the purchased product ID, or `null` if the user dismissed
   /// without purchasing.
-  static Future<String?> launch(String flowId) async {
+  static Future<String?> launch(String flowId, {bool bounces = false}) async {
     if (_apiKey == null) {
       throw PlatformException(
         code: 'NOT_INITIALIZED',
@@ -37,6 +37,7 @@ class Paygate {
 
     final result = await _channel.invokeMapMethod<String, dynamic>('launch', {
       'htmlContent': htmlContent,
+      'bounces': bounces,
     });
 
     if (result == null) return null;

@@ -19,8 +19,6 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private var pendingResult: Result? = null
 
     companion object {
-        var apiKey: String? = null
-        var baseURL: String = "http://localhost:4000"
         const val REQUEST_CODE = 9876
     }
 
@@ -35,20 +33,10 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
-            "initialize" -> {
-                apiKey = call.argument<String>("apiKey")
-                call.argument<String>("baseURL")?.let { baseURL = it }
-                result.success(null)
-            }
             "launch" -> {
-                val key = apiKey
-                if (key == null) {
-                    result.error("NOT_INITIALIZED", "Call initialize() first", null)
-                    return
-                }
-                val flowId = call.argument<String>("flowId")
-                if (flowId == null) {
-                    result.error("INVALID_ARGS", "flowId is required", null)
+                val htmlContent = call.argument<String>("htmlContent")
+                if (htmlContent == null) {
+                    result.error("INVALID_ARGS", "htmlContent is required", null)
                     return
                 }
                 val act = activity
@@ -58,9 +46,7 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 }
                 pendingResult = result
                 val intent = Intent(act, PaygateActivity::class.java).apply {
-                    putExtra("flowId", flowId)
-                    putExtra("apiKey", key)
-                    putExtra("baseURL", baseURL)
+                    putExtra("htmlContent", htmlContent)
                 }
                 act.startActivityForResult(intent, REQUEST_CODE)
             }
@@ -83,7 +69,6 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         return false
     }
 
-    // ActivityAware
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
         binding.addActivityResultListener(this)

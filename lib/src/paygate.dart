@@ -195,9 +195,14 @@ class Paygate {
       final body = await response.transform(utf8.decoder).join();
 
       if (response.statusCode != 200) {
+        String detail = '';
+        try {
+          final parsed = json.decode(body) as Map<String, dynamic>;
+          detail = parsed['detail'] as String? ?? parsed['error'] as String? ?? '';
+        } catch (_) {}
         throw PlatformException(
           code: 'LOAD_ERROR',
-          message: 'Failed to load gate (HTTP ${response.statusCode})',
+          message: 'Failed to load gate (HTTP ${response.statusCode})${detail.isNotEmpty ? ': $detail' : ''}',
         );
       }
 
@@ -219,9 +224,14 @@ class Paygate {
       final body = await response.transform(utf8.decoder).join();
 
       if (response.statusCode != 200) {
+        String detail = '';
+        try {
+          final parsed = json.decode(body) as Map<String, dynamic>;
+          detail = parsed['detail'] as String? ?? parsed['error'] as String? ?? '';
+        } catch (_) {}
         throw PlatformException(
           code: 'LOAD_ERROR',
-          message: 'Failed to load flow (HTTP ${response.statusCode})',
+          message: 'Failed to load flow (HTTP ${response.statusCode})${detail.isNotEmpty ? ': $detail' : ''}',
         );
       }
 

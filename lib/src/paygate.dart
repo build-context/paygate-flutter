@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 
@@ -11,37 +10,77 @@ class Paygate {
   static const MethodChannel _channel =
       MethodChannel('com.paygate.flutter/sdk');
 
-  static String? _apiKey;
-  static String _baseURL = 'https://api-oh6xuuomca-uc.a.run.app';
-  static final Map<String, Map<String, dynamic>> _gateCache = {};
-  static final Set<String> _purchasedProductIDs = {};
+  /// Date-based API version (Stripe-style). Matches the backend and native SDKs.
+  static const String apiVersion = '2025-03-16';
 
-  /// The set of App Store product IDs the user currently owns.
-  static Set<String> get purchasedProductIDs =>
-      Set.unmodifiable(_purchasedProductIDs);
+  static String? _apiKey;
+
+  /// The set of App Store product IDs for which the user has an active subscription.
+  /// Always reads from the native layer (iOS is source of truth).
+  static Future<Set<String>> getActiveSubscriptionProductIDs() async {
+    if (!Platform.isIOS) return {};
+    final result = await _channel
+        .invokeMethod<List<dynamic>>('getActiveSubscriptionProductIDs');
+    if (result == null) return {};
+    return result.map((e) => e as String).toSet();
+  }
 
   /// Initialize the Paygate SDK with your API key.
   ///
-  /// Must be called before [launchFlow] or [launchGate]. Typically called in your app's `main()`.
-  /// On iOS this also starts the StoreKit 2 transaction listener and loads
-  /// the user's existing purchases.
+  /// Must be called before [launchFlow] or [launchGate]. Typically called in
+  /// your app's `main()`. On iOS this also starts the StoreKit 2 transaction
+  /// listener and loads the user's active subscriptions.
+  ///
+  /// Provide [gateIds] and/or [flowIds] to prefetch gate/flow data at launch
+  /// so that [launchGate] and [launchFlow] can check subscription eligibility
+  /// and present without a network round-trip.
   static Future<void> initialize({
     required String apiKey,
     String? baseURL,
+    List<String>? gateIds,
+    List<String>? flowIds,
   }) async {
     _apiKey = apiKey;
-    if (baseURL != null) _baseURL = baseURL;
 
     if (Platform.isIOS) {
-      final result = await _channel.invokeMethod<List>('initialize');
-      if (result != null) {
-        _purchasedProductIDs.addAll(result.cast<String>());
-      }
+      await _channel.invokeMethod<List>('initialize', {
+        'apiKey': _apiKey,
+        if (baseURL != null) 'baseURL': baseURL,
+        if (gateIds != null) 'gateIds': gateIds,
+        if (flowIds != null) 'flowIds': flowIds,
+      });
     }
+  }
+
+  /// Purchase a product directly by its Paygate product ID.
+  ///
+  /// The native layer resolves the App Store / Play Store product ID
+  /// from the backend, then triggers the in-app purchase flow.
+  /// Returns the store product ID on success, or `null` if the user cancelled.
+  static Future<String?> purchase(String productId) async {
+    _ensureInitialized();
+
+    final result = await _channel.invokeMapMethod<String, dynamic>('purchase', {
+      'productId': productId,
+    });
+
+    if (result == null) return null;
+
+    final action = result['action'] as String?;
+    final purchasedId = result['productId'] as String?;
+
+    if (action == 'purchased' && purchasedId != null) {
+      return purchasedId;
+    }
+
+    return null;
   }
 
   /// Launch a paywall flow.
   ///
+  /// The native SDK fetches (or uses a prefetched) flow, checks active
+  /// subscriptions, and presents the paywall only if the user does not already
+  /// have an active subscription for a product in this flow.
   /// Returns the purchased product ID, or `null` if the user dismissed
   /// without purchasing.
   static Future<String?> launchFlow(
@@ -49,52 +88,23 @@ class Paygate {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
   }) async {
-    if (_apiKey == null) {
-      throw PlatformException(
-        code: 'NOT_INITIALIZED',
-        message: 'Call Paygate.initialize() first.',
-      );
-    }
+    _ensureInitialized();
 
-    final flowData = await _fetchFlow(flowId);
-    final htmlContent = flowData['htmlContent'] as String? ?? '';
-    final productIdMap = _buildProductIdMap(flowData);
-
-    final owned = _findOwnedProduct(flowData, productIdMap);
-    if (owned != null) return owned;
-
-    _trackEvent(flowId, 'purchase_initiated', {});
-
-    final result = await _channel.invokeMapMethod<String, dynamic>('launch', {
-      'htmlContent': htmlContent,
+    final result =
+        await _channel.invokeMapMethod<String, dynamic>('launchFlow', {
+      'flowId': flowId,
       'bounces': bounces,
       'presentationStyle': presentationStyle.name,
-      'productIdMap': productIdMap,
     });
 
-    if (result == null) return null;
-
-    final action = result['action'] as String?;
-    final productId = result['productId'] as String?;
-
-    if (action == 'purchased' && productId != null) {
-      _purchasedProductIDs.add(productId);
-      _trackEvent(flowId, 'purchase_completed', {'productId': productId});
-      return productId;
-    }
-
-    if (action == 'error') {
-      throw PlatformException(
-        code: 'PURCHASE_ERROR',
-        message: 'Purchase failed at the native layer.',
-      );
-    }
-
-    return null;
+    return _handleLaunchResult(result);
   }
 
   /// Launch a gate, which randomly selects a flow based on configured weights.
   ///
+  /// The native SDK uses a prefetched (or freshly fetched) gate flow, checks
+  /// active subscriptions, and presents the paywall only if the user does not
+  /// already have an active subscription for a product in that flow.
   /// Returns the purchased product ID, or `null` if the user dismissed
   /// without purchasing.
   static Future<String?> launchGate(
@@ -102,167 +112,37 @@ class Paygate {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
   }) async {
-    if (_apiKey == null) {
-      throw PlatformException(
-        code: 'NOT_INITIALIZED',
-        message: 'Call Paygate.initialize() first.',
-      );
-    }
+    _ensureInitialized();
 
-    final Map<String, dynamic> flowData;
-    if (_gateCache.containsKey(gateId)) {
-      flowData = _gateCache[gateId]!;
-    } else {
-      final fetched = await _fetchGate(gateId);
-      _gateCache[gateId] = fetched;
-      flowData = fetched;
-    }
-    final htmlContent = flowData['htmlContent'] as String? ?? '';
-    final selectedFlowId = flowData['selectedFlowId'] as String? ?? gateId;
-    final productIdMap = _buildProductIdMap(flowData);
-
-    final owned = _findOwnedProduct(flowData, productIdMap);
-    if (owned != null) return owned;
-
-    _trackEvent(selectedFlowId, 'purchase_initiated', {});
-
-    final result = await _channel.invokeMapMethod<String, dynamic>('launch', {
-      'htmlContent': htmlContent,
+    final result =
+        await _channel.invokeMapMethod<String, dynamic>('launchGate', {
+      'gateId': gateId,
       'bounces': bounces,
       'presentationStyle': presentationStyle.name,
-      'productIdMap': productIdMap,
     });
 
+    return _handleLaunchResult(result);
+  }
+
+  static String? _handleLaunchResult(Map<String, dynamic>? result) {
     if (result == null) return null;
 
     final action = result['action'] as String?;
     final productId = result['productId'] as String?;
 
     if (action == 'purchased' && productId != null) {
-      _purchasedProductIDs.add(productId);
-      _trackEvent(selectedFlowId, 'purchase_completed', {'productId': productId});
       return productId;
     }
 
-    if (action == 'error') {
+    return null;
+  }
+
+  static void _ensureInitialized() {
+    if (_apiKey == null) {
       throw PlatformException(
-        code: 'PURCHASE_ERROR',
-        message: 'Purchase failed at the native layer.',
+        code: 'NOT_INITIALIZED',
+        message: 'Call Paygate.initialize() first.',
       );
     }
-
-    return null;
-  }
-
-  /// Returns the first already-owned App Store product ID for this flow, or
-  /// `null` if nothing is owned yet.
-  static String? _findOwnedProduct(
-    Map<String, dynamic> flowData,
-    Map<String, String> productIdMap,
-  ) {
-    final productIds = (flowData['productIds'] as List?)?.cast<String>() ?? [];
-    for (final id in productIds) {
-      final storeId = productIdMap[id] ?? id;
-      if (_purchasedProductIDs.contains(storeId)) return storeId;
-    }
-    return null;
-  }
-
-  static Map<String, String> _buildProductIdMap(Map<String, dynamic> flowData) {
-    final products = flowData['products'] as List? ?? [];
-    final map = <String, String>{};
-    for (final product in products) {
-      if (product is Map<String, dynamic>) {
-        final id = product['id'] as String?;
-        final appStoreId = product['appStoreId'] as String?;
-        if (id != null && appStoreId != null && appStoreId.isNotEmpty) {
-          map[id] = appStoreId;
-        }
-      }
-    }
-    return map;
-  }
-
-  static Future<Map<String, dynamic>> _fetchGate(String gateId) async {
-    final client = HttpClient();
-    try {
-      final request = await client.getUrl(
-        Uri.parse('$_baseURL/api/sdk/gates/$gateId'),
-      );
-      request.headers.set('X-API-Key', _apiKey!);
-
-      final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
-
-      if (response.statusCode != 200) {
-        String detail = '';
-        try {
-          final parsed = json.decode(body) as Map<String, dynamic>;
-          detail = parsed['detail'] as String? ?? parsed['error'] as String? ?? '';
-        } catch (_) {}
-        throw PlatformException(
-          code: 'LOAD_ERROR',
-          message: 'Failed to load gate (HTTP ${response.statusCode})${detail.isNotEmpty ? ': $detail' : ''}',
-        );
-      }
-
-      return json.decode(body) as Map<String, dynamic>;
-    } finally {
-      client.close();
-    }
-  }
-
-  static Future<Map<String, dynamic>> _fetchFlow(String flowId) async {
-    final client = HttpClient();
-    try {
-      final request = await client.getUrl(
-        Uri.parse('$_baseURL/api/sdk/flows/$flowId'),
-      );
-      request.headers.set('X-API-Key', _apiKey!);
-
-      final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
-
-      if (response.statusCode != 200) {
-        String detail = '';
-        try {
-          final parsed = json.decode(body) as Map<String, dynamic>;
-          detail = parsed['detail'] as String? ?? parsed['error'] as String? ?? '';
-        } catch (_) {}
-        throw PlatformException(
-          code: 'LOAD_ERROR',
-          message: 'Failed to load flow (HTTP ${response.statusCode})${detail.isNotEmpty ? ': $detail' : ''}',
-        );
-      }
-
-      return json.decode(body) as Map<String, dynamic>;
-    } finally {
-      client.close();
-    }
-  }
-
-  static void _trackEvent(
-    String flowId,
-    String eventType,
-    Map<String, String> metadata,
-  ) {
-    () async {
-      final client = HttpClient();
-      try {
-        final request = await client.postUrl(
-          Uri.parse('$_baseURL/api/sdk/flows/$flowId/events'),
-        );
-        request.headers.set('X-API-Key', _apiKey!);
-        request.headers.contentType = ContentType.json;
-        request.write(json.encode({
-          'eventType': eventType,
-          'metadata': metadata,
-        }));
-        await request.close();
-      } catch (_) {
-      } finally {
-        client.close();
-      }
-    }();
   }
 }

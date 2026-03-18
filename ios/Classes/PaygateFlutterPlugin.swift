@@ -38,11 +38,9 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
         let args = call.arguments as? [String: Any]
         let apiKey = args?["apiKey"] as? String ?? ""
         let baseURL = args?["baseURL"] as? String
-        let gateIds = args?["gateIds"] as? [String]
-        let flowIds = args?["flowIds"] as? [String]
 
         Task { @MainActor in
-            await Paygate.initialize(apiKey: apiKey, baseURL: baseURL, gateIds: gateIds, flowIds: flowIds)
+            await Paygate.initialize(apiKey: apiKey, baseURL: baseURL)
             let active = await Array(Paygate.activeSubscriptionProductIDs)
             result(active)
         }

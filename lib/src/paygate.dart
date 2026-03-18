@@ -70,15 +70,9 @@ class Paygate {
   /// Must be called before [launchFlow] or [launchGate]. Typically called in
   /// your app's `main()`. On iOS this also starts the StoreKit 2 transaction
   /// listener and loads the user's active subscriptions.
-  ///
-  /// Provide [gateIds] and/or [flowIds] to prefetch gate/flow data at launch
-  /// so that [launchGate] and [launchFlow] can check subscription eligibility
-  /// and present without a network round-trip.
   static Future<void> initialize({
     required String apiKey,
     String? baseURL,
-    List<String>? gateIds,
-    List<String>? flowIds,
   }) async {
     _apiKey = apiKey;
 
@@ -86,8 +80,6 @@ class Paygate {
       await _channel.invokeMethod<List>('initialize', {
         'apiKey': _apiKey,
         if (baseURL != null) 'baseURL': baseURL,
-        if (gateIds != null) 'gateIds': gateIds,
-        if (flowIds != null) 'flowIds': flowIds,
       });
     }
   }
@@ -118,9 +110,9 @@ class Paygate {
 
   /// Launch a paywall flow.
   ///
-  /// The native SDK fetches (or uses a prefetched) flow, checks active
-  /// subscriptions, and presents the paywall only if the user does not already
-  /// have an active subscription for a product in this flow.
+  /// The native SDK fetches the flow, checks active subscriptions, and
+  /// presents the paywall only if the user does not already have an active
+  /// subscription for a product in this flow.
   /// Returns a typed result with status, optional productId, and optional data.
   static Future<PaygateLaunchResult> launchFlow(
     String flowId, {
@@ -143,9 +135,10 @@ class Paygate {
 
   /// Launch a gate, which randomly selects a flow based on configured weights.
   ///
-  /// The native SDK uses a prefetched (or freshly fetched) gate flow, checks
-  /// active subscriptions, and presents the paywall only if the user does not
-  /// already have an active subscription for a product in that flow.
+  /// The native SDK fetches the gate flow (or uses cached content when the gate
+  /// is configured for cache-on-first-launch), checks active subscriptions,
+  /// and presents the paywall only if the user does not already have an
+  /// active subscription for a product in that flow.
   /// Returns a typed result with status, optional productId, and optional data.
   static Future<PaygateLaunchResult> launchGate(
     String gateId, {

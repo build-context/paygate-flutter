@@ -19,8 +19,5 @@ dev_dependencies:
 flutter:
   plugin:
     platforms:
-      android:
-        package: com.paygate.flutter
-        pluginClass: PaygateFlutterPlugin
       ios:
         pluginClass: PaygateFlutterPlugin

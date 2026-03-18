@@ -19,7 +19,7 @@ class Paygate {
   static String? _apiKey;
 
   /// The set of App Store product IDs for which the user has an active subscription.
-  /// Always reads from the native layer (iOS is source of truth).
+  /// iOS only.
   static Future<Set<String>> getActiveSubscriptionProductIDs() async {
     if (!Platform.isIOS) return {};
     final result = await _channel
@@ -57,8 +57,8 @@ class Paygate {
 
   /// Purchase a product directly by its Paygate product ID.
   ///
-  /// The native layer resolves the App Store / Play Store product ID
-  /// from the backend, then triggers the in-app purchase flow.
+  /// The native layer resolves the App Store product ID from the backend,
+  /// then triggers the in-app purchase flow.
   /// Returns the store product ID on success, or `null` if the user cancelled.
   static Future<String?> purchase(String productId) async {
     _ensureInitialized();

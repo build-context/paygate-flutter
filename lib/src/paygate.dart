@@ -6,8 +6,45 @@ enum PaygatePresentationStyle {
   sheet,
 }
 
-/// Returned by [Paygate.launchGate] when the current channel is not enabled for the gate.
-const String channelNotEnabled = 'channel_not_enabled';
+/// Status returned from [Paygate.launchFlow] and [Paygate.launchGate].
+enum PaygateLaunchStatus {
+  purchased,
+  alreadySubscribed,
+  dismissed,
+  skipped,
+  channelNotEnabled,
+}
+
+/// Typed result from [Paygate.launchFlow] and [Paygate.launchGate].
+class PaygateLaunchResult {
+  final PaygateLaunchStatus status;
+  final String? productId;
+  final Map<String, dynamic>? data;
+
+  const PaygateLaunchResult({
+    required this.status,
+    this.productId,
+    this.data,
+  });
+
+  static PaygateLaunchResult fromMap(Map<dynamic, dynamic>? map) {
+    if (map == null) {
+      return const PaygateLaunchResult(status: PaygateLaunchStatus.dismissed);
+    }
+    final statusStr = map['status'] as String? ?? 'dismissed';
+    final status = PaygateLaunchStatus.values.firstWhere(
+      (s) => s.name == statusStr,
+      orElse: () => PaygateLaunchStatus.dismissed,
+    );
+    return PaygateLaunchResult(
+      status: status,
+      productId: map['productId'] as String?,
+      data: map['data'] != null
+          ? Map<String, dynamic>.from(map['data'] as Map)
+          : null,
+    );
+  }
+}
 
 class Paygate {
   static const MethodChannel _channel =
@@ -84,16 +121,15 @@ class Paygate {
   /// The native SDK fetches (or uses a prefetched) flow, checks active
   /// subscriptions, and presents the paywall only if the user does not already
   /// have an active subscription for a product in this flow.
-  /// Returns the App Store product ID if purchased or already subscribed, or
-  /// `null` if dismissed.
-  static Future<String?> launchFlow(
+  /// Returns a typed result with status, optional productId, and optional data.
+  static Future<PaygateLaunchResult> launchFlow(
     String flowId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
   }) async {
     _ensureInitialized();
 
-    final result = await _channel.invokeMethod<String?>(
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
       'launchFlow',
       {
         'flowId': flowId,
@@ -102,7 +138,7 @@ class Paygate {
       },
     );
 
-    return result;
+    return PaygateLaunchResult.fromMap(result);
   }
 
   /// Launch a gate, which randomly selects a flow based on configured weights.
@@ -110,17 +146,15 @@ class Paygate {
   /// The native SDK uses a prefetched (or freshly fetched) gate flow, checks
   /// active subscriptions, and presents the paywall only if the user does not
   /// already have an active subscription for a product in that flow.
-  /// Returns the App Store product ID if purchased or already subscribed,
-  /// [channelNotEnabled] if the current channel is not enabled for this gate,
-  /// or `null` if dismissed.
-  static Future<String?> launchGate(
+  /// Returns a typed result with status, optional productId, and optional data.
+  static Future<PaygateLaunchResult> launchGate(
     String gateId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
   }) async {
     _ensureInitialized();
 
-    final result = await _channel.invokeMethod<String?>(
+    final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
       'launchGate',
       {
         'gateId': gateId,
@@ -129,7 +163,7 @@ class Paygate {
       },
     );
 
-    return result;
+    return PaygateLaunchResult.fromMap(result);
   }
 
   static void _ensureInitialized() {

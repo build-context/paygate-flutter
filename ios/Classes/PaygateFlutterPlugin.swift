@@ -60,12 +60,12 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
 
         Task { @MainActor in
             do {
-                let productId = try await Paygate.launchFlow(
+                let launchResult = try await Paygate.launchFlow(
                     flowId,
                     bounces: bounces,
                     presentationStyle: presentationStyle
                 )
-                result(productId)
+                result(launchResultToMap(launchResult))
             } catch {
                 result(FlutterError(code: "LAUNCH_ERROR", message: error.localizedDescription, details: nil))
             }
@@ -84,16 +84,27 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
 
         Task { @MainActor in
             do {
-                let productId = try await Paygate.launchGate(
+                let launchResult = try await Paygate.launchGate(
                     gateId,
                     bounces: bounces,
                     presentationStyle: presentationStyle
                 )
-                result(productId)
+                result(launchResultToMap(launchResult))
             } catch {
                 result(FlutterError(code: "LAUNCH_ERROR", message: error.localizedDescription, details: nil))
             }
         }
+    }
+
+    private func launchResultToMap(_ r: PaygateLaunchResult) -> [String: Any] {
+        var map: [String: Any] = ["status": r.status.rawValue]
+        if let productId = r.productId {
+            map["productId"] = productId
+        }
+        if let data = r.data {
+            map["data"] = data
+        }
+        return map
     }
 
     private func handlePurchase(call: FlutterMethodCall, result: @escaping FlutterResult) {

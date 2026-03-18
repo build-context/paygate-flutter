@@ -65,12 +65,7 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                     bounces: bounces,
                     presentationStyle: presentationStyle
                 )
-                let active = await Array(Paygate.activeSubscriptionProductIDs)
-                if let productId = productId {
-                    result(["action": "purchased", "productId": productId, "activeSubscriptionProductIDs": active])
-                } else {
-                    result(["action": "dismissed", "activeSubscriptionProductIDs": active])
-                }
+                result(productId)
             } catch {
                 result(FlutterError(code: "LAUNCH_ERROR", message: error.localizedDescription, details: nil))
             }
@@ -94,12 +89,7 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                     bounces: bounces,
                     presentationStyle: presentationStyle
                 )
-                let active = await Array(Paygate.activeSubscriptionProductIDs)
-                if let productId = productId {
-                    result(["action": "purchased", "productId": productId, "activeSubscriptionProductIDs": active])
-                } else {
-                    result(["action": "dismissed", "activeSubscriptionProductIDs": active])
-                }
+                result(productId)
             } catch {
                 result(FlutterError(code: "LAUNCH_ERROR", message: error.localizedDescription, details: nil))
             }

@@ -65,7 +65,7 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                 )
                 result(launchResultToMap(launchResult))
             } catch {
-                result(FlutterError(code: "LAUNCH_ERROR", message: error.localizedDescription, details: nil))
+                result(flutterErrorForLaunch(error))
             }
         }
     }
@@ -89,9 +89,26 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                 )
                 result(launchResultToMap(launchResult))
             } catch {
-                result(FlutterError(code: "LAUNCH_ERROR", message: error.localizedDescription, details: nil))
+                result(flutterErrorForLaunch(error))
             }
         }
+    }
+
+    private func flutterErrorForLaunch(_ error: Error) -> FlutterError {
+        if let pe = error as? PaygateError {
+            if case .presentationLimitExceeded(let used, let limit) = pe {
+                var details: [String: Any] = [:]
+                if let u = used { details["used"] = u }
+                if let l = limit { details["limit"] = l }
+                return FlutterError(
+                    code: "PRESENTATION_LIMIT_EXCEEDED",
+                    message: pe.localizedDescription,
+                    details: details.isEmpty ? nil : details
+                )
+            }
+            return FlutterError(code: "LAUNCH_ERROR", message: pe.localizedDescription, details: nil)
+        }
+        return FlutterError(code: "LAUNCH_ERROR", message: error.localizedDescription, details: nil)
     }
 
     private func launchResultToMap(_ r: PaygateLaunchResult) -> [String: Any] {

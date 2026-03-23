@@ -13,6 +13,8 @@ enum PaygateLaunchStatus {
   dismissed,
   skipped,
   channelNotEnabled,
+  /// Monthly presentation quota exceeded for this project (`data` may include `used` and `limit`).
+  planLimitReached,
 }
 
 /// Typed result from [Paygate.launchFlow] and [Paygate.launchGate].

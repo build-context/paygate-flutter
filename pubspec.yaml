@@ -21,3 +21,6 @@ flutter:
     platforms:
       ios:
         pluginClass: PaygateFlutterPlugin
+      android:
+        package: com.paygate.paygate_flutter
+        pluginClass: PaygateFlutterPlugin

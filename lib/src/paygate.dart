@@ -57,10 +57,9 @@ class Paygate {
 
   static String? _apiKey;
 
-  /// The set of App Store product IDs for which the user has an active subscription.
-  /// iOS only.
+  /// Store product IDs (App Store on iOS, Google Play on Android) with an active entitlement.
   static Future<Set<String>> getActiveSubscriptionProductIDs() async {
-    if (!Platform.isIOS) return {};
+    if (!(Platform.isIOS || Platform.isAndroid)) return {};
     final result = await _channel
         .invokeMethod<List<dynamic>>('getActiveSubscriptionProductIDs');
     if (result == null) return {};
@@ -70,15 +69,15 @@ class Paygate {
   /// Initialize the Paygate SDK with your API key.
   ///
   /// Must be called before [launchFlow] or [launchGate]. Typically called in
-  /// your app's `main()`. On iOS this also starts the StoreKit 2 transaction
-  /// listener and loads the user's active subscriptions.
+  /// your app's `main()`. On native platforms this starts billing listeners
+  /// and loads active subscriptions.
   static Future<void> initialize({
     required String apiKey,
     String? baseURL,
   }) async {
     _apiKey = apiKey;
 
-    if (Platform.isIOS) {
+    if (Platform.isIOS || Platform.isAndroid) {
       await _channel.invokeMethod<List>('initialize', {
         'apiKey': _apiKey,
         if (baseURL != null) 'baseURL': baseURL,

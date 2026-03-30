@@ -3,7 +3,7 @@ pubspec = File.read(pubspec_path)
 version = pubspec.match(/^version:\s*([\d.]+)/)[1]
 
 Pod::Spec.new do |s|
-  s.name             = 'paygate'
+  s.name             = 'paygate_flutter'
   s.version          = version
   s.summary          = 'Paygate SDK for Flutter - iOS implementation'
   s.description      = 'Present paywalls, onboarding flows, and more in your Flutter app.'

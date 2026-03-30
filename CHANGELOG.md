@@ -1,3 +1,13 @@
+## 0.1.13
+
+- Bump dependencies (iOS 0.1.7, Android 0.1.7)
+- Updates
+
+## 0.1.12
+
+- Rename Dart package to **`paygate_flutter`** (use `import 'package:paygate_flutter/paygate_flutter.dart'`).
+- Rename CocoaPods pod to **`paygate_flutter`** to avoid conflicts with other `paygate` pods; still depends on **`Paygate`**.
+
 ## 0.1.11
 
 - Bump dependencies (iOS 0.1.7, Android 0.1.7)

@@ -1,6 +1,15 @@
-# paygate
+# paygate_flutter
 
-Flutter plugin for Paygate (iOS + Android).
+Flutter plugin for Paygate (iOS + Android). Add it from pub.dev:
+
+```yaml
+dependencies:
+  paygate_flutter: ^0.1.12
+```
+
+```dart
+import 'package:paygate_flutter/paygate_flutter.dart';
+```
 
 ## Android setup
 
@@ -19,4 +28,4 @@ Then `flutter run` / `flutter build apk` as usual.
 
 ## iOS
 
-Keep using `Paygate` via CocoaPods as documented for the Swift SDK (`paygate` pod depends on `Paygate`).
+The Flutter plugin uses the CocoaPods pod **`paygate_flutter`**, which depends on the native **`Paygate`** pod (Swift SDK). After upgrading, run `flutter clean` and `cd ios && pod install` so `Podfile.lock` picks up the renamed pod.

@@ -1,3 +1,12 @@
+## 0.1.8
+
+- Version bump
+
+## 0.1.7
+
+- Automated publishing via GitHub Actions OIDC
+- Add LICENSE and CHANGELOG
+
 ## 0.1.6
 
 - Rename package from `paygate_flutter` to `paygate`

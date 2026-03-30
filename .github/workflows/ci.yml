@@ -3,7 +3,6 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -23,21 +22,21 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
 
-  tag:
+  release:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Generate app token
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
       - name: Detect version and tag status
         id: ver
         run: |
@@ -55,20 +54,15 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "v${{ steps.ver.outputs.version }}" -m "v${{ steps.ver.outputs.version }}"
           git push origin "v${{ steps.ver.outputs.version }}"
-
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.5"
-          channel: stable
-          cache: true
-      - uses: flutter-actions/setup-pubdev-credentials@v1
-      - run: flutter pub get
-      - run: dart pub publish --force
+      - name: Publish to pub.dev
+        if: steps.ver.outputs.changed == 'true'
+        env:
+          PUB_TOKEN: ${{ secrets.PUB_TOKEN }}
+        run: |
+          if [ -z "${PUB_TOKEN:-}" ]; then
+            echo "::notice::PUB_TOKEN not set; skipping pub.dev publish"
+            exit 0
+          fi
+          flutter pub get
+          dart pub token add https://pub.dev --env-var=PUB_TOKEN
+          dart pub publish --force

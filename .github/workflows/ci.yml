@@ -47,6 +47,13 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           fi
+      - name: Create and push release tag
+        if: steps.ver.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.ver.outputs.version }}" -m "v${{ steps.ver.outputs.version }}"
+          git push origin "v${{ steps.ver.outputs.version }}"
       - name: Publish to pub.dev
         if: steps.ver.outputs.changed == 'true'
         env:
@@ -59,10 +66,3 @@ jobs:
           flutter pub get
           dart pub token add https://pub.dev --env-var=PUB_TOKEN
           dart pub publish --force
-      - name: Create and push release tag
-        if: steps.ver.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.ver.outputs.version }}" -m "v${{ steps.ver.outputs.version }}"
-          git push origin "v${{ steps.ver.outputs.version }}"

@@ -1,7 +1,7 @@
 name: paygate_flutter
 description: Paygate SDK for Flutter - Present paywalls, onboarding flows, and more in your app.
 version: 0.1.1
-homepage: https://github.com/paygate/paygate-flutter
+homepage: https://github.com/build-context/paygate-flutter
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

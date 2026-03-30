@@ -1,0 +1,27 @@
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pub:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.PUB_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
+      - name: Publish to pub.dev
+        env:
+          PUB_TOKEN: ${{ secrets.PUB_TOKEN }}
+        run: |
+          dart pub token add https://pub.dev --env-var=PUB_TOKEN
+          dart pub publish --force

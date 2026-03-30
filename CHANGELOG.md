@@ -1,3 +1,7 @@
+## 0.1.11
+
+- Bump dependencies (iOS 0.1.7, Android 0.1.7)
+
 ## 0.1.10
 
 - Bump dependencies (iOS 0.1.7, Android 0.1.7)

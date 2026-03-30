@@ -1,4 +1,4 @@
-group = "com.paygate.paygate_flutter"
+group = "com.paygate.paygate"
 version = "0.1.0"
 
 buildscript {
@@ -25,7 +25,7 @@ apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
 
 android {
-    namespace = "com.paygate.paygate_flutter"
+    namespace = "com.paygate.paygate"
     compileSdk = 34
 
     compileOptions {
@@ -47,6 +47,6 @@ android {
 }
 
 dependencies {
-    implementation "com.paygate:paygate-sdk:0.1.0"
+    implementation "com.paygate:paygate:0.1.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 }

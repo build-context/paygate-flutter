@@ -1,6 +1,6 @@
 import Flutter
 import UIKit
-import PaygateSDK
+import Paygate
 
 public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
 

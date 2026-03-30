@@ -3,7 +3,7 @@ pubspec = File.read(pubspec_path)
 version = pubspec.match(/^version:\s*([\d.]+)/)[1]
 
 Pod::Spec.new do |s|
-  s.name             = 'paygate_flutter'
+  s.name             = 'paygate'
   s.version          = version
   s.summary          = 'Paygate SDK for Flutter - iOS implementation'
   s.description      = 'Present paywalls, onboarding flows, and more in your Flutter app.'
@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.source           = { :git => 'https://github.com/build-context/paygate-flutter.git', :tag => "v#{s.version}" }
   s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.dependency 'PaygateSDK'
+  s.dependency 'Paygate'
   s.platform         = :ios, '15.0'
   s.swift_version    = '5.0'
 end

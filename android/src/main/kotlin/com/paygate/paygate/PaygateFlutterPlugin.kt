@@ -1,4 +1,4 @@
-package com.paygate.paygate_flutter
+package com.paygate.paygate
 
 import android.app.Activity
 import android.content.Context

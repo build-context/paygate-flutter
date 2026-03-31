@@ -9,8 +9,8 @@
 /// // Initialize the SDK
 /// await Paygate.initialize(apiKey: 'your_api_key');
 ///
-/// // Launch a flow — returns product ID or null if dismissed
-/// final product = await Paygate.launch('your_flow_id');
+/// // Launch a gate (or use launchFlow for a single flow)
+/// final result = await Paygate.launchGate('your_gate_id');
 /// ```
 library paygate_flutter;
 

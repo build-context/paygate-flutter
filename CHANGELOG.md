@@ -1,3 +1,13 @@
+## 0.1.15
+
+- Bump Android dependency to 0.2.0, which fixes subscription purchases using the
+  wrong base plan. The billing flow took the first entry of Play's
+  `subscriptionOfferDetails`, which spans every base plan on a subscription id
+  and every offer within each — so on a subscription with more than one base plan
+  the cadence charged was whatever Play listed first, and a promotional offer
+  could be selected in place of the standing price.
+- Products can now carry `playBasePlanId`, which pins that selection.
+
 ## 0.1.14
 
 - Bump dependencies (iOS 0.1.8, Android 0.1.8)

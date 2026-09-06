@@ -6,6 +6,27 @@ enum PaygatePresentationStyle {
   sheet,
 }
 
+/// Which color scheme a flow renders in.
+///
+/// The paywall is HTML in a WebView, and a WebView's `prefers-color-scheme`
+/// follows the device — not your app. An app whose users can pick light or
+/// dark independently of the OS (a `ThemeMode` setting of its own) will show a
+/// paywall that disagrees with the screen behind it unless it passes its own
+/// value here.
+///
+/// Set a default on the gate in the Paygate console; anything passed to
+/// [Paygate.launchGate] overrides it.
+enum PaygateAppearance {
+  /// Follow the device's light/dark setting.
+  system,
+
+  /// Render light regardless of the device setting.
+  light,
+
+  /// Render dark regardless of the device setting.
+  dark,
+}
+
 /// Status returned from [Paygate.launchFlow] and [Paygate.launchGate].
 enum PaygateLaunchStatus {
   purchased,
@@ -115,10 +136,15 @@ class Paygate {
   /// presents the paywall only if the user does not already have an active
   /// subscription for a product in this flow.
   /// Returns a typed result with status, optional productId, and optional data.
+  ///
+  /// [appearance] pins the flow's color scheme. Flows carry no appearance of
+  /// their own — that setting lives on the gate — so this defaults to
+  /// [PaygateAppearance.system], which follows the device.
   static Future<PaygateLaunchResult> launchFlow(
     String flowId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
+    PaygateAppearance appearance = PaygateAppearance.system,
   }) async {
     _ensureInitialized();
 
@@ -128,6 +154,7 @@ class Paygate {
         'flowId': flowId,
         'bounces': bounces,
         'presentationStyle': presentationStyle.name,
+        'appearance': appearance.name,
       },
     );
 
@@ -141,10 +168,16 @@ class Paygate {
   /// and presents the paywall only if the user does not already have an
   /// active subscription for a product in that flow.
   /// Returns a typed result with status, optional productId, and optional data.
+  ///
+  /// [appearance] overrides the appearance configured on the gate. Pass it when
+  /// your app has its own light/dark setting — a WebView follows the device,
+  /// not your app, so leaving it to the gate means the paywall can disagree
+  /// with the screen behind it. `null` (the default) uses the gate's setting.
   static Future<PaygateLaunchResult> launchGate(
     String gateId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
+    PaygateAppearance? appearance,
   }) async {
     _ensureInitialized();
 
@@ -154,6 +187,10 @@ class Paygate {
         'gateId': gateId,
         'bounces': bounces,
         'presentationStyle': presentationStyle.name,
+        // Omitted rather than sent as "system": the native side distinguishes
+        // "the app has no opinion" from "the app asked for system", and only
+        // the first defers to the gate.
+        if (appearance != null) 'appearance': appearance.name,
       },
     );
 

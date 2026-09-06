@@ -3,6 +3,7 @@ package com.paygate.paygate
 import android.app.Activity
 import android.content.Context
 import com.paygate.sdk.Paygate
+import com.paygate.sdk.PaygateAppearance
 import com.paygate.sdk.PaygateLaunchResult
 import com.paygate.sdk.PaygateLaunchStatus
 import com.paygate.sdk.PaygatePresentationStyle
@@ -93,7 +94,13 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
         scope.launch {
             try {
                 val style = parsePresentationStyle(presentationStyle)
-                val launchResult = Paygate.launchFlow(act, flowId, bounces, style)
+                val launchResult = Paygate.launchFlow(
+                    act,
+                    flowId,
+                    bounces,
+                    style,
+                    parseAppearance(call.argument<String>("appearance")) ?: PaygateAppearance.SYSTEM
+                )
                 result.success(launchResultToMap(launchResult))
             } catch (e: Exception) {
                 result.error("LAUNCH_ERROR", e.message, null)
@@ -115,7 +122,13 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
         scope.launch {
             try {
                 val style = parsePresentationStyle(presentationStyle)
-                val launchResult = Paygate.launchGate(act, gateId, bounces, style)
+                val launchResult = Paygate.launchGate(
+                    act,
+                    gateId,
+                    bounces,
+                    style,
+                    parseAppearance(call.argument<String>("appearance"))
+                )
                 result.success(launchResultToMap(launchResult))
             } catch (e: Exception) {
                 result.error("LAUNCH_ERROR", e.message, null)
@@ -176,6 +189,14 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
     private fun parsePresentationStyle(value: String): PaygatePresentationStyle =
         if (value == "fullScreen") PaygatePresentationStyle.FULL_SCREEN
         else PaygatePresentationStyle.SHEET
+
+    /**
+     * Null when Dart omitted the argument, which is how "the app has no
+     * opinion, use the gate's setting" crosses the channel. An explicit
+     * `system` is a different thing and stays non-null.
+     */
+    private fun parseAppearance(value: String?): PaygateAppearance? =
+        value?.let { PaygateAppearance.fromServerValue(it) }
 
     private fun launchResultToMap(r: PaygateLaunchResult): Map<String, Any?> {
         val m = mutableMapOf<String, Any?>("status" to statusToDartName(r.status))

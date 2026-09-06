@@ -61,7 +61,8 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                 let launchResult = try await Paygate.launchFlow(
                     flowId,
                     bounces: bounces,
-                    presentationStyle: presentationStyle
+                    presentationStyle: presentationStyle,
+                    appearance: parseAppearance(args["appearance"]) ?? .system
                 )
                 result(launchResultToMap(launchResult))
             } catch {
@@ -85,7 +86,8 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                 let launchResult = try await Paygate.launchGate(
                     gateId,
                     bounces: bounces,
-                    presentationStyle: presentationStyle
+                    presentationStyle: presentationStyle,
+                    appearance: parseAppearance(args["appearance"])
                 )
                 result(launchResultToMap(launchResult))
             } catch {
@@ -151,5 +153,13 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
         default:
             return .sheet
         }
+    }
+
+    /// `nil` when Dart omitted the argument, which is how "the app has no
+    /// opinion, use the gate's setting" crosses the channel. An explicit
+    /// `system` is a different thing and stays non-nil.
+    private func parseAppearance(_ value: Any?) -> PaygateAppearance? {
+        guard let raw = value as? String else { return nil }
+        return PaygateAppearance(rawValue: raw)
     }
 }

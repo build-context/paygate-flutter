@@ -1,3 +1,11 @@
+## 0.2.1
+
+- Bumps the Android dependency to 0.3.1, which fixes a crash at
+  `Paygate.initialize` on Play Billing 8. Apps pairing this plugin with
+  `in_app_purchase` were affected: that package requires `billing:8.0.0`, and
+  the native SDK called an `enablePendingPurchases()` overload removed in 8.
+  The result was a `NoSuchMethodError` that killed the app at launch.
+
 ## 0.2.0
 
 - Gates can pin a flow's colour scheme. A WebView reads `prefers-color-scheme`

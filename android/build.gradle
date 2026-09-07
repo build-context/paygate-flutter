@@ -47,6 +47,6 @@ android {
 }
 
 dependencies {
-    implementation "com.paygate:paygate:0.3.0"
+    implementation "com.paygate:paygate:0.3.1"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 }

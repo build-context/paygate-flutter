@@ -3,7 +3,6 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -23,52 +22,14 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
 
-  tag:
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate app token
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
-      - name: Detect version and tag status
-        id: ver
-        run: |
-          VERSION=$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | tr -d "'" | cut -d+ -f1)
-          if git tag -l "v${VERSION}" | grep -q .; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Create and push release tag
-        if: steps.ver.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.ver.outputs.version }}" -m "v${{ steps.ver.outputs.version }}"
-          git push origin "v${{ steps.ver.outputs.version }}"
-
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.5"
-          channel: stable
-          cache: true
-      - uses: flutter-actions/setup-pubdev-credentials@v1
-      - run: flutter pub get
-      - run: dart pub publish --force
+# Releases are NOT automated. Publishing is done by hand from the monorepo — see
+# sdks/RELEASING.md and scripts/release-sdk.sh.
+#
+# The release jobs that used to live here were removed on purpose. Every channel
+# failed at some point on an expired or misconfigured credential — a CocoaPods
+# trunk session that lapsed, a pub.dev token, an npm scope that rejects the
+# token — and the failures were quiet: a tag would be created and the publish
+# would fail after it, leaving the repo looking released when nothing had been.
+# A human running one script and reading its output is slower and more honest.
+#
+# This build job stays: it is the signal that the mirrored source still compiles.

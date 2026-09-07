@@ -1,3 +1,12 @@
+## 0.3.0
+
+- Bump dependencies (iOS 0.3.0, Android 0.4.0), which brings per-channel gate
+  caching and storefront-aware pricing to Flutter apps. No Dart API changes:
+  this plugin forwards `launchGate` to the native SDKs and never touches gate
+  metadata, so both features arrive through the native pins.
+- Requires a Paygate API deployed on or after 2026-09-07, since the native SDKs
+  now send `Paygate-Version: 2026-09-07`.
+
 ## 0.2.1
 
 - Bumps the Android dependency to 0.3.1, which fixes a crash at

@@ -1,3 +1,25 @@
+## 0.4.0
+
+- **`Paygate.initialize` takes `channelOverride`**, a new
+  `PaygateDistributionChannel`. **On Android this is the only way to mark an
+  internal-testing build**: Play tells an installed app nothing about which
+  track served it, so a Play test build otherwise reports `production` and takes
+  production's caching — which is how a console edit appears not to have taken.
+  Pass it from a `--dart-define`, a flavor, or any build-time signal; leave it
+  null everywhere else, since both platforms detect debug builds and iOS detects
+  TestFlight on its own.
+- **Breaking, indirectly.** The `testflight` channel is now `testing` across the
+  suite. No Dart symbol changes — this plugin never named the channel — but a
+  gate configured for `testflight` in the console is now configured for
+  `testing`, and the API migration handles that.
+- Bumps the native pins (iOS 0.4.0, Android 0.5.0). Android also gains
+  install-source detection: a release build that did not come from Play now
+  reports `testing` on its own, so a locally built AAB stops silently taking
+  production caching.
+- An unrecognized `channelOverride` name is logged and ignored on both
+  platforms rather than throwing — version skew between Dart and a native pin
+  must not take the paywall down.
+
 ## 0.3.0
 
 - Bump dependencies (iOS 0.3.0, Android 0.4.0), which brings per-channel gate

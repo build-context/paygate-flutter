@@ -27,6 +27,27 @@ enum PaygateAppearance {
   dark,
 }
 
+/// Which kind of build this is, as far as a gate's per-channel settings care.
+///
+/// A gate decides per channel whether it shows and whether the SDK re-fetches
+/// it on every launch, so this is what makes a console edit appear immediately
+/// on a test build and stay cached for everyone else.
+///
+/// Normally detected for you. Pass one to [Paygate.initialize] only to override
+/// that — see [Paygate.initialize]'s `channelOverride`, which on Android is the
+/// only way to mark an internal-testing build.
+enum PaygateDistributionChannel {
+  /// A shipped build, installed from the App Store or Play.
+  production,
+
+  /// A build under test: TestFlight on iOS, and on Android an install that did
+  /// not come from Play — or any build that says so via `channelOverride`.
+  testing,
+
+  /// A debuggable build. Detected natively; you should not need to pass this.
+  debug,
+}
+
 /// Status returned from [Paygate.launchFlow] and [Paygate.launchGate].
 enum PaygateLaunchStatus {
   purchased,
@@ -92,9 +113,34 @@ class Paygate {
   /// Must be called before [launchFlow] or [launchGate]. Typically called in
   /// your app's `main()`. On native platforms this starts billing listeners
   /// and loads active subscriptions.
+  ///
+  /// [channelOverride] forces the distribution channel instead of letting the
+  /// native SDK work it out. **On Android this is the only way to mark an
+  /// internal-testing build**, because Play tells an installed app nothing
+  /// about which track served it — internal, closed, open and production all
+  /// look identical from inside the app. So a Play test build reports
+  /// `production` and takes production's caching, which is how a console edit
+  /// appears not to have taken.
+  ///
+  /// Pass it from something known at build time — a flavor, a `BuildConfig`
+  /// field, a `--dart-define`:
+  ///
+  /// ```dart
+  /// await Paygate.initialize(
+  ///   apiKey: '...',
+  ///   channelOverride: const bool.fromEnvironment('INTERNAL_TESTING')
+  ///       ? PaygateDistributionChannel.testing
+  ///       : null,
+  /// );
+  /// ```
+  ///
+  /// Leave it null everywhere else. iOS detects TestFlight on its own, and
+  /// both platforms detect a debug build, so an override is a claim you have
+  /// to keep true rather than a setting to fill in.
   static Future<void> initialize({
     required String apiKey,
     String? baseURL,
+    PaygateDistributionChannel? channelOverride,
   }) async {
     _apiKey = apiKey;
 
@@ -102,6 +148,9 @@ class Paygate {
       await _channel.invokeMethod<List>('initialize', {
         'apiKey': _apiKey,
         if (baseURL != null) 'baseURL': baseURL,
+        // Sent as the wire name the native enums parse, so adding a channel
+        // later is a native change rather than a new bridge contract.
+        if (channelOverride != null) 'channelOverride': channelOverride.name,
       });
     }
   }

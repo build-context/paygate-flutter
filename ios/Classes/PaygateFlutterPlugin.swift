@@ -39,6 +39,18 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
         let apiKey = args?["apiKey"] as? String ?? ""
         let baseURL = args?["baseURL"] as? String
 
+        // Set before initialize, so nothing can read the channel in between.
+        // An unrecognized name leaves detection alone rather than failing: a
+        // Dart side newer than this plugin is version skew, and taking the
+        // paywall down over it would be the worse outcome.
+        if let raw = args?["channelOverride"] as? String {
+            if let channel = DistributionChannel(rawValue: raw) {
+                Paygate.channelOverride = channel
+            } else {
+                print("[Paygate] Ignoring unknown channelOverride \"\(raw)\"; detecting the channel instead.")
+            }
+        }
+
         Task { @MainActor in
             await Paygate.initialize(apiKey: apiKey, baseURL: baseURL)
             let active = await Array(Paygate.activeSubscriptionProductIDs)

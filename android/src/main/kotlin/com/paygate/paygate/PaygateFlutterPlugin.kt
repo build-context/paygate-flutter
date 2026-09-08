@@ -2,6 +2,7 @@ package com.paygate.paygate
 
 import android.app.Activity
 import android.content.Context
+import com.paygate.sdk.DistributionChannel
 import com.paygate.sdk.Paygate
 import com.paygate.sdk.PaygateAppearance
 import com.paygate.sdk.PaygateLaunchResult
@@ -69,6 +70,19 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
             result.error("NO_CONTEXT", "No application context", null)
             return
         }
+
+        // Set before initialize, so nothing can read the channel in between.
+        // An unrecognized name leaves detection alone rather than throwing: a
+        // Dart side newer than this plugin is a version-skew problem, and
+        // failing the whole init over it would take the paywall down with it.
+        call.argument<String>("channelOverride")?.let { raw ->
+            DistributionChannel.fromServerValue(raw)?.let { Paygate.channelOverride = it }
+                ?: android.util.Log.w(
+                    "Paygate",
+                    "Ignoring unknown channelOverride \"$raw\"; detecting the channel instead.",
+                )
+        }
+
         scope.launch {
             try {
                 Paygate.initialize(ctx, apiKey, baseURL)

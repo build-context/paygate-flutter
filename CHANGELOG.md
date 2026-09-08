@@ -1,3 +1,11 @@
+## 0.4.1
+
+- Picks up Android 0.5.1, which fixes a Buy button that could do nothing at all:
+  a Play product lookup whose callback never arrived left the purchase hanging
+  forever, with no error and no log. It now times out and surfaces as a
+  `PaygateResult.Error`. Anyone testing Android purchases wants this.
+- No Dart API changes.
+
 ## 0.4.0
 
 - **`Paygate.initialize` takes `channelOverride`**, a new

@@ -1,3 +1,18 @@
+## 0.4.2
+
+- Picks up Android 0.5.2, which fixes a Buy button that did nothing in any app
+  that also depends on Play Billing 8 — which is every app using
+  `in_app_purchase` 0.5.x, since it requires Billing 8.0.0 exactly. Billing 8
+  changed `ProductDetailsResponseListener` incompatibly, and Gradle's
+  highest-wins conflict resolution put 8 on the classpath regardless of what the
+  Android SDK compiled against, so its callback died with `AbstractMethodError`
+  inside Play's own thread. Silent: the paywall stalled for the product-lookup
+  timeout and then closed, reading exactly like a dead button.
+- **If you pinned `com.paygate:paygate:0.5.2` in your app's
+  `android/app/build.gradle.kts` to work around this, you can now remove it** —
+  this release asks for 0.5.2 itself.
+- No Dart API changes.
+
 ## 0.4.1
 
 - Picks up Android 0.5.1, which fixes a Buy button that could do nothing at all:

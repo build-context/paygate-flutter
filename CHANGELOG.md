@@ -1,3 +1,9 @@
+## 0.4.4
+
+- Picks up Android 0.5.4: a Play Billing reconnect that is refused transiently
+  (Play busy, a network blip) is retried with backoff instead of failing the
+  purchase. No Dart API changes.
+
 ## 0.4.3
 
 - Picks up Android 0.5.3. **Buy no longer fails with "Billing service not

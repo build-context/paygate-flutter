@@ -1,3 +1,15 @@
+## 0.4.3
+
+- Picks up Android 0.5.3. **Buy no longer fails with "Billing service not
+  connected" after Play drops its connection** (a Play Store update, the app
+  backgrounded): the SDK now reconnects instead of failing every purchase until
+  the app is restarted. Also fixes one-time (INAPP) products never being found,
+  because "no such product" on the subscription lookup was read as a timeout.
+- Android 0.5.3 is the first of the 0.5.2+ line published to GitHub Packages;
+  0.4.2's `com.paygate:paygate:0.5.2` pin only ever resolved from a local Maven
+  repository.
+- No Dart API changes.
+
 ## 0.4.2
 
 - Picks up Android 0.5.2, which fixes a Buy button that did nothing in any app

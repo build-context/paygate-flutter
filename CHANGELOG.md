@@ -1,3 +1,11 @@
+## 0.4.5
+
+- **Swift Package Manager support on iOS.** Apps with Flutter's Swift Package
+  Manager support on now build the plugin from `ios/paygate_flutter/Package.swift`,
+  which pulls the native SDK from `build-context/paygate-ios` (0.4.0) instead of
+  CocoaPods. CocoaPods apps are unaffected: the podspec builds the same sources.
+- No Dart API changes.
+
 ## 0.4.4
 
 - Picks up Android 0.5.4: a Play Billing reconnect that is refused transiently

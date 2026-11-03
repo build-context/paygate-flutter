@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.license          = { :type => 'MIT' }
   s.author           = { 'Paygate' => 'support@paygate.dev' }
   s.source           = { :git => 'https://github.com/build-context/paygate-flutter.git', :tag => "v#{s.version}" }
-  s.source_files     = 'Classes/**/*'
+  s.source_files     = 'paygate_flutter/Sources/paygate_flutter/**/*.swift'
   s.dependency 'Flutter'
   s.dependency 'Paygate', '0.4.0'
   s.platform         = :ios, '15.0'

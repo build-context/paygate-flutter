@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.source           = { :git => 'https://github.com/build-context/paygate-flutter.git', :tag => "v#{s.version}" }
   s.source_files     = 'paygate_flutter/Sources/paygate_flutter/**/*.swift'
   s.dependency 'Flutter'
-  s.dependency 'Paygate', '0.4.0'
+  s.dependency 'Paygate', '0.5.0'
   s.platform         = :ios, '15.0'
   s.swift_version    = '5.0'
 end

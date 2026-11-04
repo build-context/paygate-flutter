@@ -22,6 +22,12 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
             handlePurchase(call: call, result: result)
         case "getActiveSubscriptionProductIDs":
             handleGetActiveSubscriptionProductIDs(result: result)
+        case "setAppUserId":
+            let args = call.arguments as? [String: Any]
+            Paygate.appUserId = args?["appUserId"] as? String
+            result(nil)
+        case "getInstallId":
+            result(Paygate.installId)
         default:
             result(FlutterMethodNotImplemented)
         }

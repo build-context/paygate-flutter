@@ -18,7 +18,7 @@ let package = Package(
         .library(name: "paygate-flutter", targets: ["paygate_flutter"])
     ],
     dependencies: [
-        .package(url: "https://github.com/build-context/paygate-ios.git", exact: "0.4.0")
+        .package(url: "https://github.com/build-context/paygate-ios.git", exact: "0.5.0")
     ],
     targets: [
         .target(

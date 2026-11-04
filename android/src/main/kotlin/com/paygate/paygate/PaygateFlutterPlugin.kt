@@ -59,6 +59,11 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
             "launchGate" -> handleLaunchGate(call, result)
             "purchase" -> handlePurchase(call, result)
             "getActiveSubscriptionProductIDs" -> handleGetActive(call, result)
+            "setAppUserId" -> {
+                Paygate.appUserId = call.argument<String>("appUserId")
+                result.success(null)
+            }
+            "getInstallId" -> handleGetInstallId(result)
             else -> result.notImplemented()
         }
     }
@@ -91,6 +96,18 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
             } catch (e: Exception) {
                 result.error("INIT_ERROR", e.message, null)
             }
+        }
+    }
+
+    private fun handleGetInstallId(result: MethodChannel.Result) {
+        val ctx = applicationContext ?: run {
+            result.error("NO_CONTEXT", "No application context", null)
+            return
+        }
+        // Off the main thread: the first read touches SharedPreferences.
+        scope.launch {
+            val id = kotlinx.coroutines.withContext(Dispatchers.IO) { Paygate.installId(ctx) }
+            result.success(id)
         }
     }
 

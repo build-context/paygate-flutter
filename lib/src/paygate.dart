@@ -210,7 +210,9 @@ class Paygate {
     return PaygateLaunchResult.fromMap(result);
   }
 
-  /// Launch a gate, which randomly selects a flow based on configured weights.
+  /// Launch a gate, which shows one of its flows chosen by the configured
+  /// weights. The choice is sticky: the same reader (see [setAppUserId]) gets
+  /// the same flow every time, until the gate's weights change.
   ///
   /// The native SDK fetches the gate flow (or uses cached content when the gate
   /// is configured for cache-on-first-launch), checks active subscriptions,
@@ -244,6 +246,37 @@ class Paygate {
     );
 
     return PaygateLaunchResult.fromMap(result);
+  }
+
+  /// Your own id for the signed-in user, or `null` to clear it.
+  ///
+  /// A gate shows each reader the same flow every time. Without an app user
+  /// id that is per install — the native SDK keeps a random install id for
+  /// it. With one, it follows the user instead: the same flow on their phone
+  /// and their iPad, and after a reinstall.
+  ///
+  /// Setting it moves a reader **once**, from their install's flow to their
+  /// user's, so call it as early as you know who they are — ideally before
+  /// the first [launchGate]. Clearing it (sign-out) moves them back to the
+  /// install's flow.
+  ///
+  /// Sent as a request header. Use an opaque id (a database key, a UUID), not
+  /// an email address. Safe to call before [initialize].
+  static Future<void> setAppUserId(String? appUserId) async {
+    if (!(Platform.isIOS || Platform.isAndroid)) return;
+    await _channel.invokeMethod<void>('setAppUserId', {
+      'appUserId': appUserId,
+    });
+  }
+
+  /// The random id the native SDK keeps for this install, which a gate uses
+  /// to show this reader the same flow every time.
+  ///
+  /// Exposed only so you can log it alongside your own analytics or quote it
+  /// in a support conversation. `null` off iOS and Android.
+  static Future<String?> getInstallId() async {
+    if (!(Platform.isIOS || Platform.isAndroid)) return null;
+    return _channel.invokeMethod<String>('getInstallId');
   }
 
   static void _ensureInitialized() {

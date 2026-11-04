@@ -1,3 +1,16 @@
+## 0.5.0
+
+- Picks up iOS 0.5.0 and Android 0.6.0: **a gate now shows each reader the
+  same flow — and so the same price — on every launch**, instead of re-rolling
+  its weights per fetch. Nothing to call; the native SDKs keep a random install
+  id and send it with every request.
+- **`Paygate.setAppUserId(id)`** (optional) assigns by your own user id instead,
+  so one person gets the same flow across devices and reinstalls. Setting it
+  moves a reader once, from their install's flow to their user's.
+- **`Paygate.getInstallId()`** returns the native install id, for your own logs.
+- Note the version jump: `^0.4.x` constraints do not pick this up; depend on
+  `^0.5.0`.
+
 ## 0.4.5
 
 - **Swift Package Manager support on iOS.** Apps with Flutter's Swift Package

@@ -51,6 +51,8 @@ enum PaygateDistributionChannel {
 /// Status returned from [Paygate.launchFlow] and [Paygate.launchGate].
 enum PaygateLaunchStatus {
   purchased,
+  /// The user already owns one of the flow's products — a subscription or a
+  /// lifetime purchase — so no paywall was shown.
   alreadySubscribed,
   dismissed,
   skipped,
@@ -99,11 +101,46 @@ class Paygate {
 
   static String? _apiKey;
 
-  /// Store product IDs (App Store on iOS, Google Play on Android) with an active entitlement.
-  static Future<Set<String>> getActiveSubscriptionProductIDs() async {
+  /// Store product IDs (App Store on iOS, Google Play on Android) the user
+  /// owns right now: active subscriptions **and** lifetime (non-consumable)
+  /// purchases.
+  ///
+  /// Read from the store's on-device record, so it answers offline. An empty
+  /// set means the store said the user owns nothing; when the store cannot
+  /// answer, this keeps the last known answer rather than emptying it.
+  static Future<Set<String>> getActiveEntitlementProductIDs() async {
     if (!(Platform.isIOS || Platform.isAndroid)) return {};
     final result = await _channel
-        .invokeMethod<List<dynamic>>('getActiveSubscriptionProductIDs');
+        .invokeMethod<List<dynamic>>('getActiveEntitlementProductIDs');
+    if (result == null) return {};
+    return result.map((e) => e as String).toSet();
+  }
+
+  /// The old name for [getActiveEntitlementProductIDs], and the same set.
+  ///
+  /// Since 0.6.0 it includes lifetime purchases on iOS too. Before, a
+  /// non-consumable never appeared here on iOS, so an app checking it locked
+  /// out lifetime buyers.
+  @Deprecated('Use getActiveEntitlementProductIDs')
+  static Future<Set<String>> getActiveSubscriptionProductIDs() =>
+      getActiveEntitlementProductIDs();
+
+  /// Restore purchases, for a "Restore purchases" row in your own settings.
+  ///
+  /// Asks the store again what this account owns (on iOS this may ask for the
+  /// Apple Account password) and returns it — an empty set when there is
+  /// nothing to restore. Show the user the outcome either way.
+  ///
+  /// Throws a [PlatformException] with code `RESTORE_CANCELLED` when they
+  /// cancel the iOS password prompt, and `RESTORE_ERROR` when the store could
+  /// not be reached, so "could not check" never reads as "owns nothing".
+  ///
+  /// A paywall's own Restore button (`paygate.restore()` in the flow) does
+  /// not need this; the native SDK handles it and tells the reader the result.
+  static Future<Set<String>> restorePurchases() async {
+    _ensureInitialized();
+    if (!(Platform.isIOS || Platform.isAndroid)) return {};
+    final result = await _channel.invokeMethod<List<dynamic>>('restorePurchases');
     if (result == null) return {};
     return result.map((e) => e as String).toSet();
   }
@@ -112,7 +149,7 @@ class Paygate {
   ///
   /// Must be called before [launchFlow] or [launchGate]. Typically called in
   /// your app's `main()`. On native platforms this starts billing listeners
-  /// and loads active subscriptions.
+  /// and loads what the user owns (subscriptions and lifetime purchases).
   ///
   /// [channelOverride] forces the distribution channel instead of letting the
   /// native SDK work it out. **On Android this is the only way to mark an
@@ -181,9 +218,9 @@ class Paygate {
 
   /// Launch a paywall flow.
   ///
-  /// The native SDK fetches the flow, checks active subscriptions, and
-  /// presents the paywall only if the user does not already have an active
-  /// subscription for a product in this flow.
+  /// The native SDK fetches the flow, checks what the user owns, and
+  /// presents the paywall only if they do not already own a product in this
+  /// flow (a subscription or a lifetime purchase).
   /// Returns a typed result with status, optional productId, and optional data.
   ///
   /// [appearance] pins the flow's color scheme. Flows carry no appearance of
@@ -215,9 +252,9 @@ class Paygate {
   /// the same flow every time, until the gate's weights change.
   ///
   /// The native SDK fetches the gate flow (or uses cached content when the gate
-  /// is configured for cache-on-first-launch), checks active subscriptions,
-  /// and presents the paywall only if the user does not already have an
-  /// active subscription for a product in that flow.
+  /// is configured for cache-on-first-launch), checks what the user owns,
+  /// and presents the paywall only if they do not already own a product in
+  /// that flow (a subscription or a lifetime purchase).
   /// Returns a typed result with status, optional productId, and optional data.
   ///
   /// [appearance] overrides the appearance configured on the gate. Pass it when

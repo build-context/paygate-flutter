@@ -1,3 +1,26 @@
+## 0.6.0
+
+- Picks up iOS 0.6.0 and Android 0.7.0. **Lifetime (non-consumable) purchases
+  now unlock on iOS.** Before, the iOS SDK kept only subscriptions, so a
+  lifetime buyer kept seeing the gate and Restore found nothing.
+- **`Paygate.getActiveEntitlementProductIDs()`** returns what the user owns:
+  subscriptions and lifetime purchases. `getActiveSubscriptionProductIDs()` is
+  deprecated but still works, and **now includes lifetime purchases on iOS**,
+  so an app that reads it to decide who has paid starts counting lifetime
+  buyers with no change.
+- **A paywall's Restore button is never silent.** If it finds nothing, or the
+  store can't be reached, the flow hears about it through `paygate.onRestore`
+  or the Promise `paygate.restore()` now returns. A flow that doesn't handle it
+  gets a native alert from the SDK.
+- **`Paygate.restorePurchases()`** for a "Restore purchases" row in your own
+  settings. It returns the owned product ids, and throws a `PlatformException`
+  (`RESTORE_CANCELLED` or `RESTORE_ERROR`) rather than returning an empty set
+  when it couldn't check.
+- On Android, a Play failure no longer empties the owned set, and restored
+  purchases are acknowledged so Play doesn't refund them.
+- Note the version jump: `^0.5.x` constraints don't pick this up. Depend on
+  `^0.6.0`.
+
 ## 0.5.0
 
 - Picks up iOS 0.5.0 and Android 0.6.0: **a gate now shows each reader the

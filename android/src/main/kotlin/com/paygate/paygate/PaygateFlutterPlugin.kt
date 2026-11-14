@@ -58,7 +58,11 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
             "launchFlow" -> handleLaunchFlow(call, result)
             "launchGate" -> handleLaunchGate(call, result)
             "purchase" -> handlePurchase(call, result)
+            // Both names answer the same set. The old one stays for a Dart
+            // side older than this plugin.
+            "getActiveEntitlementProductIDs",
             "getActiveSubscriptionProductIDs" -> handleGetActive(call, result)
+            "restorePurchases" -> handleRestorePurchases(result)
             "setAppUserId" -> {
                 Paygate.appUserId = call.argument<String>("appUserId")
                 result.success(null)
@@ -91,7 +95,7 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
         scope.launch {
             try {
                 Paygate.initialize(ctx, apiKey, baseURL)
-                val active = Paygate.getActiveSubscriptionProductIds()
+                val active = Paygate.getActiveEntitlementProductIds()
                 result.success(active.toList())
             } catch (e: Exception) {
                 result.error("INIT_ERROR", e.message, null)
@@ -179,7 +183,7 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
         scope.launch {
             try {
                 val purchased = Paygate.purchase(act, productId)
-                val active = Paygate.getActiveSubscriptionProductIds()
+                val active = Paygate.getActiveEntitlementProductIds()
                 if (purchased != null) {
                     result.success(
                         mapOf(
@@ -209,10 +213,24 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
         }
         scope.launch {
             try {
-                val active = Paygate.getActiveSubscriptionProductIds()
+                val active = Paygate.getActiveEntitlementProductIds()
                 result.success(active.toList())
             } catch (e: Exception) {
                 result.error("ERROR", e.message, null)
+            }
+        }
+    }
+
+    private fun handleRestorePurchases(result: MethodChannel.Result) {
+        if (applicationContext == null) {
+            result.error("NO_CONTEXT", "No application context", null)
+            return
+        }
+        scope.launch {
+            try {
+                result.success(Paygate.restorePurchases().toList())
+            } catch (e: Exception) {
+                result.error("RESTORE_ERROR", e.message, null)
             }
         }
     }

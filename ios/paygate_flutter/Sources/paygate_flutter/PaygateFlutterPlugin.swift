@@ -1,4 +1,5 @@
 import Flutter
+import StoreKit
 import UIKit
 import Paygate
 
@@ -20,8 +21,12 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
             handleLaunchGate(call: call, result: result)
         case "purchase":
             handlePurchase(call: call, result: result)
-        case "getActiveSubscriptionProductIDs":
-            handleGetActiveSubscriptionProductIDs(result: result)
+        // Both names answer the same set. The old one stays for a Dart side
+        // older than this plugin.
+        case "getActiveEntitlementProductIDs", "getActiveSubscriptionProductIDs":
+            handleGetActiveEntitlementProductIDs(result: result)
+        case "restorePurchases":
+            handleRestorePurchases(result: result)
         case "setAppUserId":
             let args = call.arguments as? [String: Any]
             Paygate.appUserId = args?["appUserId"] as? String
@@ -33,9 +38,22 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleGetActiveSubscriptionProductIDs(result: @escaping FlutterResult) {
+    private func handleRestorePurchases(result: @escaping FlutterResult) {
         Task { @MainActor in
-            let active = await Array(Paygate.activeSubscriptionProductIDs)
+            do {
+                let owned = try await Paygate.restorePurchases()
+                result(Array(owned))
+            } catch StoreKitError.userCancelled {
+                result(FlutterError(code: "RESTORE_CANCELLED", message: "Restore was cancelled", details: nil))
+            } catch {
+                result(FlutterError(code: "RESTORE_ERROR", message: error.localizedDescription, details: nil))
+            }
+        }
+    }
+
+    private func handleGetActiveEntitlementProductIDs(result: @escaping FlutterResult) {
+        Task { @MainActor in
+            let active = await Array(Paygate.activeEntitlementProductIDs)
             result(active)
         }
     }
@@ -59,7 +77,7 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
 
         Task { @MainActor in
             await Paygate.initialize(apiKey: apiKey, baseURL: baseURL)
-            let active = await Array(Paygate.activeSubscriptionProductIDs)
+            let active = await Array(Paygate.activeEntitlementProductIDs)
             result(active)
         }
     }
@@ -152,7 +170,7 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
         Task { @MainActor in
             do {
                 let purchasedId = try await Paygate.purchase(productId)
-                let active = await Array(Paygate.activeSubscriptionProductIDs)
+                let active = await Array(Paygate.activeEntitlementProductIDs)
                 if let purchasedId = purchasedId {
                     result(["action": "purchased", "productId": purchasedId, "activeSubscriptionProductIDs": active])
                 } else {

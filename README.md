@@ -4,7 +4,7 @@ Flutter plugin for Paygate (iOS + Android). Add it from pub.dev:
 
 ```yaml
 dependencies:
-  paygate_flutter: ^0.5.0
+  paygate_flutter: ^0.6.0
 ```
 
 ```dart
@@ -52,4 +52,4 @@ trunk. After upgrading, run `flutter clean` and `cd ios && pod install` so
 `Podfile.lock` picks up the new version.
 
 If an app has to pin the native pod itself, use the trunk version, for example
-`pod 'Paygate', '0.5.0'`, rather than a `:git` source.
+`pod 'Paygate', '0.6.0'`, rather than a `:git` source.

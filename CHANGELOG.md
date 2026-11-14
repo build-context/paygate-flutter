@@ -1,3 +1,9 @@
+## 0.6.1
+
+- Picks up iOS 0.6.1 and Android 0.7.1: **a purchase made in a gate is now
+  credited to that gate** in Paygate's revenue, instead of arriving as
+  unattributed. Nothing to change in your app; the native SDKs report it.
+
 ## 0.6.0
 
 - Picks up iOS 0.6.0 and Android 0.7.0. **Lifetime (non-consumable) purchases

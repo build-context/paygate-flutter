@@ -1,3 +1,10 @@
+## Unreleased
+
+- **`sheetCornerRadius`** on `launchGate` and `launchFlow`: the paywall sheet's
+  corner radius in points on iOS, so its corners match the app's other sheets.
+  iOS 16 and later, sheet style only. `null`, the default, keeps the system's
+  radius. Android ignores it (the paywall there is full screen).
+
 ## 0.6.0
 
 - Picks up iOS 0.6.0 and Android 0.7.0. **Lifetime (non-consumable) purchases

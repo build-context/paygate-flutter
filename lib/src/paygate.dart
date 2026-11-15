@@ -226,11 +226,18 @@ class Paygate {
   /// [appearance] pins the flow's color scheme. Flows carry no appearance of
   /// their own — that setting lives on the gate — so this defaults to
   /// [PaygateAppearance.system], which follows the device.
+  ///
+  /// [sheetCornerRadius] sets the sheet's corner radius in points on iOS, so
+  /// the paywall's corners match your app's other sheets. iOS draws it as a
+  /// continuous corner. It applies to [PaygatePresentationStyle.sheet] on
+  /// iOS 16 and later; `null` (the default) keeps the system's radius.
+  /// Android ignores it.
   static Future<PaygateLaunchResult> launchFlow(
     String flowId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
     PaygateAppearance appearance = PaygateAppearance.system,
+    double? sheetCornerRadius,
   }) async {
     _ensureInitialized();
 
@@ -241,6 +248,7 @@ class Paygate {
         'bounces': bounces,
         'presentationStyle': presentationStyle.name,
         'appearance': appearance.name,
+        if (sheetCornerRadius != null) 'sheetCornerRadius': sheetCornerRadius,
       },
     );
 
@@ -261,11 +269,18 @@ class Paygate {
   /// your app has its own light/dark setting — a WebView follows the device,
   /// not your app, so leaving it to the gate means the paywall can disagree
   /// with the screen behind it. `null` (the default) uses the gate's setting.
+  ///
+  /// [sheetCornerRadius] sets the sheet's corner radius in points on iOS, so
+  /// the paywall's corners match your app's other sheets. iOS draws it as a
+  /// continuous corner. It applies to [PaygatePresentationStyle.sheet] on
+  /// iOS 16 and later; `null` (the default) keeps the system's radius.
+  /// Android ignores it.
   static Future<PaygateLaunchResult> launchGate(
     String gateId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
     PaygateAppearance? appearance,
+    double? sheetCornerRadius,
   }) async {
     _ensureInitialized();
 
@@ -279,6 +294,7 @@ class Paygate {
         // "the app has no opinion" from "the app asked for system", and only
         // the first defers to the gate.
         if (appearance != null) 'appearance': appearance.name,
+        if (sheetCornerRadius != null) 'sheetCornerRadius': sheetCornerRadius,
       },
     );
 

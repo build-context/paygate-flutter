@@ -1,5 +1,12 @@
 ## Unreleased
 
+- **Paygate finishes (iOS) and acknowledges (Android) only the purchases it
+  made**, so an app with its own purchase code verifies its purchases before
+  they are finished. Pass `completesAllPurchases: true` to `initialize` if
+  Paygate is the only thing in your app that buys.
+- **`Paygate.setLocale(...)`**, and `locale` on `launchGate` and `launchFlow`:
+  the paywall follows the app's language instead of the device's. Prices
+  don't change. Works on both platforms.
 - **`sheetCornerRadius`** on `launchGate` and `launchFlow`: the paywall sheet's
   corner radius in points on iOS, so its corners match the app's other sheets.
   iOS 16 and later, sheet style only. `null`, the default, keeps the system's

@@ -1,5 +1,6 @@
-## Unreleased
+## 0.7.0
 
+- Picks up iOS 0.7.0 and Android 0.8.0.
 - **Paygate finishes (iOS) and acknowledges (Android) only the purchases it
   made**, so an app with its own purchase code verifies its purchases before
   they are finished. Pass `completesAllPurchases: true` to `initialize` if

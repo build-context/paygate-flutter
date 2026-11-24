@@ -174,10 +174,19 @@ class Paygate {
   /// Leave it null everywhere else. iOS detects TestFlight on its own, and
   /// both platforms detect a debug build, so an override is a claim you have
   /// to keep true rather than a setting to fill in.
+  ///
+  /// [completesAllPurchases] is off by default: Paygate finishes (iOS) and
+  /// acknowledges (Android) only the purchases it made, and leaves the rest
+  /// to your app. That matters when your app has purchase code of its own
+  /// that verifies a purchase with its server first; older versions finished
+  /// those too, sometimes before the app had verified them. Turn it on only
+  /// when Paygate is the one thing in your app that buys, so renewals and
+  /// purchases made outside the app get finished as well.
   static Future<void> initialize({
     required String apiKey,
     String? baseURL,
     PaygateDistributionChannel? channelOverride,
+    bool completesAllPurchases = false,
   }) async {
     _apiKey = apiKey;
 
@@ -188,6 +197,7 @@ class Paygate {
         // Sent as the wire name the native enums parse, so adding a channel
         // later is a native change rather than a new bridge contract.
         if (channelOverride != null) 'channelOverride': channelOverride.name,
+        'completesAllPurchases': completesAllPurchases,
       });
     }
   }
@@ -226,11 +236,23 @@ class Paygate {
   /// [appearance] pins the flow's color scheme. Flows carry no appearance of
   /// their own — that setting lives on the gate — so this defaults to
   /// [PaygateAppearance.system], which follows the device.
+  ///
+  /// [sheetCornerRadius] sets the sheet's corner radius in points on iOS, so
+  /// the paywall's corners match your app's other sheets. iOS draws it as a
+  /// continuous corner. It applies to [PaygatePresentationStyle.sheet] on
+  /// iOS 16 and later; `null` (the default) keeps the system's radius.
+  /// Android ignores it.
+  ///
+  /// [locale] is the language for this paywall, as a BCP 47 tag (`'es'`,
+  /// `'pt-BR'`), overriding [setLocale]. `null` uses [setLocale]'s value,
+  /// and the device language when that is unset.
   static Future<PaygateLaunchResult> launchFlow(
     String flowId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
     PaygateAppearance appearance = PaygateAppearance.system,
+    double? sheetCornerRadius,
+    String? locale,
   }) async {
     _ensureInitialized();
 
@@ -241,6 +263,8 @@ class Paygate {
         'bounces': bounces,
         'presentationStyle': presentationStyle.name,
         'appearance': appearance.name,
+        if (sheetCornerRadius != null) 'sheetCornerRadius': sheetCornerRadius,
+        if (locale != null) 'locale': locale,
       },
     );
 
@@ -261,11 +285,23 @@ class Paygate {
   /// your app has its own light/dark setting — a WebView follows the device,
   /// not your app, so leaving it to the gate means the paywall can disagree
   /// with the screen behind it. `null` (the default) uses the gate's setting.
+  ///
+  /// [sheetCornerRadius] sets the sheet's corner radius in points on iOS, so
+  /// the paywall's corners match your app's other sheets. iOS draws it as a
+  /// continuous corner. It applies to [PaygatePresentationStyle.sheet] on
+  /// iOS 16 and later; `null` (the default) keeps the system's radius.
+  /// Android ignores it.
+  ///
+  /// [locale] is the language for this paywall, as a BCP 47 tag (`'es'`,
+  /// `'pt-BR'`), overriding [setLocale]. `null` uses [setLocale]'s value,
+  /// and the device language when that is unset.
   static Future<PaygateLaunchResult> launchGate(
     String gateId, {
     bool bounces = false,
     PaygatePresentationStyle presentationStyle = PaygatePresentationStyle.sheet,
     PaygateAppearance? appearance,
+    double? sheetCornerRadius,
+    String? locale,
   }) async {
     _ensureInitialized();
 
@@ -279,6 +315,8 @@ class Paygate {
         // "the app has no opinion" from "the app asked for system", and only
         // the first defers to the gate.
         if (appearance != null) 'appearance': appearance.name,
+        if (sheetCornerRadius != null) 'sheetCornerRadius': sheetCornerRadius,
+        if (locale != null) 'locale': locale,
       },
     );
 
@@ -304,6 +342,22 @@ class Paygate {
     await _channel.invokeMethod<void>('setAppUserId', {
       'appUserId': appUserId,
     });
+  }
+
+  /// The language your app shows, as a BCP 47 tag (`'es'`, `'pt-BR'`), when
+  /// it has a language setting of its own; `null` for the device language.
+  ///
+  /// A paywall is a web page, so it sees the device's language, not your
+  /// app's. Call this when the reader picks a language (and at startup with
+  /// the saved choice), and the paywall follows it: the flow reads it as
+  /// `paygate.locale`, `navigator.language` reports it, and the wording
+  /// Paygate writes for a product's billing period and trial comes back in
+  /// it. Prices do not change: they are the store's price for the reader's
+  /// country, which is what they are charged. Safe to call before
+  /// [initialize].
+  static Future<void> setLocale(String? locale) async {
+    if (!(Platform.isIOS || Platform.isAndroid)) return;
+    await _channel.invokeMethod<void>('setLocale', {'locale': locale});
   }
 
   /// The random id the native SDK keeps for this install, which a gate uses

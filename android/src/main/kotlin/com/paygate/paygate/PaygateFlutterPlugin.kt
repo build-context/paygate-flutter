@@ -67,6 +67,10 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
                 Paygate.appUserId = call.argument<String>("appUserId")
                 result.success(null)
             }
+            "setLocale" -> {
+                Paygate.locale = call.argument<String>("locale")
+                result.success(null)
+            }
             "getInstallId" -> handleGetInstallId(result)
             else -> result.notImplemented()
         }
@@ -91,6 +95,8 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
                     "Ignoring unknown channelOverride \"$raw\"; detecting the channel instead.",
                 )
         }
+
+        call.argument<Boolean>("completesAllPurchases")?.let { Paygate.completesAllPurchases = it }
 
         scope.launch {
             try {
@@ -134,7 +140,8 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
                     flowId,
                     bounces,
                     style,
-                    parseAppearance(call.argument<String>("appearance")) ?: PaygateAppearance.SYSTEM
+                    parseAppearance(call.argument<String>("appearance")) ?: PaygateAppearance.SYSTEM,
+                    call.argument<String>("locale")
                 )
                 result.success(launchResultToMap(launchResult))
             } catch (e: Exception) {
@@ -162,7 +169,8 @@ class PaygateFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Act
                     gateId,
                     bounces,
                     style,
-                    parseAppearance(call.argument<String>("appearance"))
+                    parseAppearance(call.argument<String>("appearance")),
+                    call.argument<String>("locale")
                 )
                 result.success(launchResultToMap(launchResult))
             } catch (e: Exception) {

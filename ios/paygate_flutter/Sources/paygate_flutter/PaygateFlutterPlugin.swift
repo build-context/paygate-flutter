@@ -31,6 +31,10 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
             let args = call.arguments as? [String: Any]
             Paygate.appUserId = args?["appUserId"] as? String
             result(nil)
+        case "setLocale":
+            let args = call.arguments as? [String: Any]
+            Paygate.locale = args?["locale"] as? String
+            result(nil)
         case "getInstallId":
             result(Paygate.installId)
         default:
@@ -75,6 +79,10 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
 
+        if let completesAll = args?["completesAllPurchases"] as? Bool {
+            Paygate.completesAllPurchases = completesAll
+        }
+
         Task { @MainActor in
             await Paygate.initialize(apiKey: apiKey, baseURL: baseURL)
             let active = await Array(Paygate.activeEntitlementProductIDs)
@@ -98,7 +106,9 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                     flowId,
                     bounces: bounces,
                     presentationStyle: presentationStyle,
-                    appearance: parseAppearance(args["appearance"]) ?? .system
+                    appearance: parseAppearance(args["appearance"]) ?? .system,
+                    sheetCornerRadius: parseCornerRadius(args["sheetCornerRadius"]),
+                    locale: args["locale"] as? String
                 )
                 result(launchResultToMap(launchResult))
             } catch {
@@ -123,7 +133,9 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
                     gateId,
                     bounces: bounces,
                     presentationStyle: presentationStyle,
-                    appearance: parseAppearance(args["appearance"])
+                    appearance: parseAppearance(args["appearance"]),
+                    sheetCornerRadius: parseCornerRadius(args["sheetCornerRadius"]),
+                    locale: args["locale"] as? String
                 )
                 result(launchResultToMap(launchResult))
             } catch {
@@ -189,6 +201,13 @@ public class PaygateFlutterPlugin: NSObject, FlutterPlugin {
         default:
             return .sheet
         }
+    }
+
+    /// `nil` when Dart omitted it: keep the system's radius. Dart sends a
+    /// double, but an int literal can arrive as an integer, so take any number.
+    private func parseCornerRadius(_ value: Any?) -> CGFloat? {
+        guard let number = value as? NSNumber else { return nil }
+        return CGFloat(number.doubleValue)
     }
 
     /// `nil` when Dart omitted the argument, which is how "the app has no

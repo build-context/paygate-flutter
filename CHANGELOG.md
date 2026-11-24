@@ -1,8 +1,23 @@
-## 0.6.1
+## Unreleased (next: 0.7.1)
 
-- Picks up iOS 0.6.1 and Android 0.7.1: **a purchase made in a gate is now
+- Will pick up iOS 0.7.1 and Android 0.8.1: **a purchase made in a gate is now
   credited to that gate** in Paygate's revenue, instead of arriving as
   unattributed. Nothing to change in your app; the native SDKs report it.
+
+## 0.7.0
+
+- Picks up iOS 0.7.0 and Android 0.8.0.
+- **Paygate finishes (iOS) and acknowledges (Android) only the purchases it
+  made**, so an app with its own purchase code verifies its purchases before
+  they are finished. Pass `completesAllPurchases: true` to `initialize` if
+  Paygate is the only thing in your app that buys.
+- **`Paygate.setLocale(...)`**, and `locale` on `launchGate` and `launchFlow`:
+  the paywall follows the app's language instead of the device's. Prices
+  don't change. Works on both platforms.
+- **`sheetCornerRadius`** on `launchGate` and `launchFlow`: the paywall sheet's
+  corner radius in points on iOS, so its corners match the app's other sheets.
+  iOS 16 and later, sheet style only. `null`, the default, keeps the system's
+  radius. Android ignores it (the paywall there is full screen).
 
 ## 0.6.0
 
